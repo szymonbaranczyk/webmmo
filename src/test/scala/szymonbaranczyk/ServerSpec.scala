@@ -1,17 +1,13 @@
 package szymonbaranczyk
 
 /**
-  * Created by User1 on 20/07/2016.
+  * Created by Szymon Barańczyk.
   */
 
 import akka.http.scaladsl.model.StatusCodes.OK
-import akka.http.scaladsl.model.ws.BinaryMessage
 import akka.http.scaladsl.testkit.{ScalatestRouteTest, WSProbe}
-import akka.util.ByteString
 import org.scalatest.{FlatSpec, Matchers, _}
 import szymonbaranczyk.boot.{ClosingHandle, Server}
-
-import scala.concurrent.duration.DurationInt
 
 class ServerSpec extends FlatSpec with BeforeAndAfterAll with ScalatestRouteTest with Matchers {
   var stopHandlers: Option[ClosingHandle] = None
@@ -36,16 +32,6 @@ class ServerSpec extends FlatSpec with BeforeAndAfterAll with ScalatestRouteTest
       check {
         // check response for WS Upgrade headers
         isWebSocketUpgrade shouldEqual true
-
-        // manually run a WS conversation
-        wsClient.sendMessage("Peter")
-        wsClient.expectMessage("Hello Peter")
-
-        wsClient.sendMessage(BinaryMessage(ByteString("abcdef")))
-        wsClient.expectNoMessage(100.millis)
-
-        wsClient.sendMessage("John")
-        wsClient.expectMessage("Hello John")
 
         wsClient.sendCompletion()
         wsClient.expectCompletion()

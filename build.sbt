@@ -13,6 +13,10 @@ libraryDependencies ++= {
     "com.typesafe.akka" %% "akka-http-experimental" % akkaV,
     "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaV,
     "com.typesafe.akka" %% "akka-http-testkit" % akkaV,
-    "org.scalatest" %% "scalatest" % scalaTestV % "test"
+    "com.typesafe.akka" %% "akka-http-spray-json-experimental" % akkaV,
+    "org.scalatest" %% "scalatest" % scalaTestV % "test",
+    "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0",
+    "ch.qos.logback" % "logback-classic" % "1.1.7",
+    "com.typesafe.play" % "play-json_2.10" % "2.4.8"
   )
 }

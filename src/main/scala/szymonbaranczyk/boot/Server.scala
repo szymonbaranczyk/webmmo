@@ -7,33 +7,49 @@ import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
+import com.typesafe.config.ConfigFactory
+import com.typesafe.scalalogging.LazyLogging
+import play.api.libs.json._
+import szymonbaranczyk.exitFlow.{GameData, GameDataPublisher, PlayerData}
+import szymonbaranczyk.helper.JsonParser
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 import scala.io.StdIn
 
 /**
-  * Created by Szymon on 17/07/2016.
+  * Created by Szymon Barańczyk.
   */
 //should all these things be defined seperately? Is it only way to expose them for testing?
 case class ClosingHandle(future: Future[ServerBinding], system: ActorSystem)
-object Server {
+
+object Server extends LazyLogging with JsonParser {
   implicit val system = ActorSystem("system")
   implicit val materializer = ActorMaterializer()
   implicit val executionContext = system.dispatcher
+  val conf = ConfigFactory.load()
+  val port = conf.getInt("server.port")
+  val dataSource = Source.actorPublisher[GameData](GameDataPublisher.props(executionContext))
+  val loggingSink = Sink.foreach[Message] {
+    case tm: TextMessage.Strict =>
+      logger.info("you got mail!")
+    case tm: TextMessage.Streamed =>
+      logger.error("There is TextMessage streamed!")
+    case bm: BinaryMessage =>
+      logger.error("There is BinaryMessage sent or streamed!")
+  }
+  val greeterWebSocketService = Flow.fromSinkAndSource(loggingSink,
+    dataSource map { d => TextMessage.Strict(Json.prettyPrint(Json.toJson(d))) })
 
   def main(args: Array[String]) {
     val handle = startServer()
-    println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
+    println(s"Server online at http://localhost:$port/\nPress RETURN to stop...")
     StdIn.readLine() // let it run until user presses return
     stopServer(handle)
   }
 
   def startServer() = {
-
-
-    val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
-
-
+    val bindingFuture = Http().bindAndHandle(route, "localhost", port)
     ClosingHandle(bindingFuture, system)
   }
 
@@ -50,18 +66,14 @@ object Server {
       }
     }
 
-  def greeterWebSocketService =
-    Flow[Message]
-      .mapConcat {
-        case tm: TextMessage => TextMessage(Source.single("Hello ") ++ tm.textStream) :: Nil
-        case bm: BinaryMessage =>
-          // ignore binary messages but drain content to avoid the stream being clogged
-          bm.dataStream.runWith(Sink.ignore)
-          Nil
-      }
+  system.scheduler.schedule(10 seconds, 10 seconds) {
+    system.eventStream.publish(GameData(Seq(PlayerData(1, 2, 3, 4)), 1))
+  }
+
 
   def stopServer(handle: ClosingHandle): Unit = {
     implicit val executionContext = handle.system.dispatcher
+    logger.info("shuting down")
     handle.future
       .flatMap(_.unbind()) // trigger unbinding from the port
       .onComplete(_ => handle.system.terminate()) // and shutdown when done
