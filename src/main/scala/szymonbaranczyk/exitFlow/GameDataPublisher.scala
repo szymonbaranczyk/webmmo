@@ -1,6 +1,7 @@
 package szymonbaranczyk.exitFlow
 
 import akka.actor.Props
+import akka.event.EventBus
 import akka.stream.actor.ActorPublisher
 
 import scala.concurrent.ExecutionContext
@@ -8,7 +9,7 @@ import scala.concurrent.ExecutionContext
 /**
   * Created by Szymon Barańczyk.
   */
-class GameDataPublisher extends ActorPublisher[GameData] {
+class GameDataPublisher(val eventBus: EventBus) extends ActorPublisher[GameData] {
 
   override def preStart = {
     context.system.eventStream.subscribe(self, classOf[GameData])
@@ -25,9 +26,9 @@ class GameDataPublisher extends ActorPublisher[GameData] {
 }
 
 object GameDataPublisher {
-  def props(implicit ctx: ExecutionContext): Props = Props(new GameDataPublisher())
+  def props(implicit ctx: ExecutionContext, eventBus: EventBus): Props = Props(new GameDataPublisher(eventBus))
 }
 
-case class GameData(playersData: Seq[PlayerData], gameId: Int)
+case class GameData(playersData: Seq[PlayerData])
 
-case class PlayerData(x: Int, y: Int, rotation: Int, turretRotation: Int)
+case class PlayerData(x: Int, y: Int, rotation: Int, turretRotation: Int, id: String)

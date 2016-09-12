@@ -10,7 +10,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
-import szymonbaranczyk.exitFlow.{GameData, GameDataPublisher, PlayerData}
+import szymonbaranczyk.exitFlow._
 import szymonbaranczyk.helper.JsonParser
 
 import scala.concurrent.Future
@@ -29,7 +29,8 @@ object Server extends LazyLogging with JsonParser {
   implicit val executionContext = system.dispatcher
   val conf = ConfigFactory.load()
   val port = conf.getInt("server.port")
-  val dataSource = Source.actorPublisher[GameData](GameDataPublisher.props(executionContext))
+  val eventBus = new GameDataBus()
+  val dataSource = Source.actorPublisher[GameData](GameDataPublisher.props(executionContext, eventBus))
   val loggingSink = Sink.foreach[Message] {
     case tm: TextMessage.Strict =>
       logger.info("you got mail!")
@@ -67,7 +68,12 @@ object Server extends LazyLogging with JsonParser {
     }
 
   system.scheduler.schedule(10 seconds, 10 seconds) {
-    system.eventStream.publish(GameData(Seq(PlayerData(1, 2, 3, 4)), 1))
+    eventBus.publish(
+      GameDataEnvelope(
+        GameData(Seq(PlayerData(1, 2, 3, 4, "player1")))
+        , 1
+      )
+    )
   }
 
 

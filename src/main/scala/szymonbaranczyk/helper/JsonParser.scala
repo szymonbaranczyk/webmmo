@@ -14,25 +14,24 @@ trait JsonParser {
       "x" -> playerData.x,
       "y" -> playerData.y,
       "rotation" -> playerData.rotation,
-      "turretRotation" -> playerData.turretRotation
+      "turretRotation" -> playerData.turretRotation,
+      "id" -> playerData.id
     )
   }
   implicit val gameWrites = new Writes[GameData] {
     def writes(gameData: GameData) = Json.obj(
-      "playersData" -> gameData.playersData,
-      "gameId" -> gameData.gameId
+      "playersData" -> gameData.playersData
     )
   }
   implicit val playerReads = (
     (JsPath \ "x").read[Int] and
       (JsPath \ "y").read[Int] and
       (JsPath \ "rotation").read[Int] and
-      (JsPath \ "turretRotation").read[Int]
+      (JsPath \ "turretRotation").read[Int] and
+      (JsPath \ "id").read[String]
     ) (PlayerData.apply _)
-  implicit val gameReads = (
-    (JsPath \ "playersData").read[Seq[PlayerData]] and
-      (JsPath \ "gameId").read[Int]
-    ) (GameData.apply _)
+  implicit val gameReads: Reads[GameData] =
+    (JsPath \ "playersData").read[Seq[PlayerData]].map(seq => GameData(seq))
 
 
 }
