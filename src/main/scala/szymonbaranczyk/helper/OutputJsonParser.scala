@@ -5,9 +5,9 @@ import play.api.libs.json._
 import szymonbaranczyk.exitFlow.{GameData, PlayerData}
 
 /**
-  * Created by Szymon Barańczyk on 28/08/2016.
+  * Created by Szymon Barańczyk.
   */
-trait JsonParser {
+trait OutputJsonParser {
 
   implicit val playerWrites = new Writes[PlayerData] {
     def writes(playerData: PlayerData) = Json.obj(
@@ -32,6 +32,5 @@ trait JsonParser {
     ) (PlayerData.apply _)
   implicit val gameReads: Reads[GameData] =
     (JsPath \ "playersData").read[Seq[PlayerData]].map(seq => GameData(seq))
-
 
 }

@@ -1,20 +1,23 @@
 package szymonbaranczyk.boot
 
-import akka.actor.ActorSystem
+import akka.actor._
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
+import akka.pattern.ask
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{Broadcast, Flow, Sink, Source}
+import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
 import szymonbaranczyk.exitFlow._
-import szymonbaranczyk.helper.JsonParser
+import szymonbaranczyk.helper.OutputJsonParser
+import szymonbaranczyk.managers.{GameIdService, getId}
 
-import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.io.StdIn
 
 /**
@@ -23,15 +26,17 @@ import scala.io.StdIn
 //should all these things be defined seperately? Is it only way to expose them for testing?
 case class ClosingHandle(future: Future[ServerBinding], system: ActorSystem)
 
-object Server extends LazyLogging with JsonParser {
+object Server extends LazyLogging with OutputJsonParser {
   implicit val system = ActorSystem("system")
   implicit val materializer = ActorMaterializer()
   implicit val executionContext = system.dispatcher
   val conf = ConfigFactory.load()
   val port = conf.getInt("server.port")
+
   val eventBus = new GameDataBus()
-  val dataSource = Source.actorPublisher[GameData](GameDataPublisher.props(executionContext, eventBus))
-  val loggingSink = Sink.foreach[Message] {
+
+  val gameIdActor = system.actorOf(Props[GameIdService])
+  val loggingSink = Sink.foreach((x: Message) => x match {
     case tm: TextMessage.Strict =>
       logger.info("you got mail!")
     case tm: TextMessage.Streamed =>
@@ -39,8 +44,8 @@ object Server extends LazyLogging with JsonParser {
     case bm: BinaryMessage =>
       logger.error("There is BinaryMessage sent or streamed!")
   }
-  val greeterWebSocketService = Flow.fromSinkAndSource(loggingSink,
-    dataSource map { d => TextMessage.Strict(Json.prettyPrint(Json.toJson(d))) })
+  )
+
 
   def main(args: Array[String]) {
     val handle = startServer()
@@ -63,7 +68,7 @@ object Server extends LazyLogging with JsonParser {
       getFromResourceDirectory("web")
     } ~ path("greeter") {
       get {
-        handleWebSocketMessages(greeterWebSocketService)
+        handleWebSocketMessages(constructWebSocketService())
       }
     }
 
@@ -76,6 +81,17 @@ object Server extends LazyLogging with JsonParser {
     )
   }
 
+  def constructWebSocketService() = {
+    implicit val timeout = Timeout(1 second)
+    val id: Int = Await.result((gameIdActor ? getId()).mapTo[Int], 1 second)
+
+    val dataSource = Source.actorPublisher[GameData](GameDataPublisher.props(executionContext, eventBus, id))
+
+    val sink = Sink.combine(Sink.foreach(println), loggingSink)(Broadcast[Message](_))
+
+    Flow.fromSinkAndSource(sink,
+      dataSource map { d => TextMessage.Strict(Json.prettyPrint(Json.toJson(d))) })
+  }
 
   def stopServer(handle: ClosingHandle): Unit = {
     implicit val executionContext = handle.system.dispatcher
@@ -84,4 +100,5 @@ object Server extends LazyLogging with JsonParser {
       .flatMap(_.unbind()) // trigger unbinding from the port
       .onComplete(_ => handle.system.terminate()) // and shutdown when done
   }
+
 }

@@ -4,6 +4,8 @@ version := "0.1"
 
 scalaVersion := "2.11.8"
 
+scalacOptions ++= Seq("-feature")
+
 libraryDependencies ++= {
   val akkaV = "2.4.8"
   val scalaTestV = "2.2.6"
