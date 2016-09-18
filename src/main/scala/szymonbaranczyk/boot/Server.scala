@@ -12,9 +12,9 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
+import szymonbaranczyk.enterFlow._
 import szymonbaranczyk.exitFlow._
 import szymonbaranczyk.helper.OutputJsonParser
-import szymonbaranczyk.managers.{GameIdService, getId}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -23,7 +23,7 @@ import scala.io.StdIn
 /**
   * Created by Szymon Barańczyk.
   */
-//should all these things be defined seperately? Is it only way to expose them for testing?
+//should all these things be defined separately? Is it only way to expose them for testing?
 case class ClosingHandle(future: Future[ServerBinding], system: ActorSystem)
 
 object Server extends LazyLogging with OutputJsonParser {
@@ -35,7 +35,10 @@ object Server extends LazyLogging with OutputJsonParser {
 
   val eventBus = new GameDataBus()
 
-  val gameIdActor = system.actorOf(Props[GameIdService])
+  val gameManager = system.actorOf(Props[GameManager])
+  //TODO delete mock game
+  gameManager ! CreateGame(1)
+
   val loggingSink = Sink.foreach((x: Message) => x match {
     case tm: TextMessage.Strict =>
       logger.info("you got mail!")
@@ -72,6 +75,7 @@ object Server extends LazyLogging with OutputJsonParser {
       }
     }
 
+  //TODO delete mock gameData
   system.scheduler.schedule(10 seconds, 10 seconds) {
     eventBus.publish(
       GameDataEnvelope(
@@ -83,9 +87,9 @@ object Server extends LazyLogging with OutputJsonParser {
 
   def constructWebSocketService() = {
     implicit val timeout = Timeout(1 second)
-    val id: Int = Await.result((gameIdActor ? getId()).mapTo[Int], 1 second)
+    val game: Game = Await.result((gameManager ? PutPlayerInRandomGame()).mapTo[Game], 1 second)
 
-    val dataSource = Source.actorPublisher[GameData](GameDataPublisher.props(executionContext, eventBus, id))
+    val dataSource = Source.actorPublisher[GameData](GameDataPublisher.props(executionContext, eventBus, game.id))
 
     val sink = Sink.combine(Sink.foreach(println), loggingSink)(Broadcast[Message](_))
 
