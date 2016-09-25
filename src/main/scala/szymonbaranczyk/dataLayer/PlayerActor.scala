@@ -15,8 +15,6 @@ import scala.util.Random
   */
 case class CalculateState()
 
-case class PlayerData()
-
 class PlayerActor(id: String) extends Actor with InputJsonParser {
   val size = 4000
   var queue = Queue.empty[PlayerInput]
