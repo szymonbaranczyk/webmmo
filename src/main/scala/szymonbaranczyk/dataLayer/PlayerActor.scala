@@ -22,6 +22,6 @@ class PlayerActor(id: String) extends Actor with InputJsonParser {
   override def receive: Receive = {
     case tm: TextMessage.Strict =>
       queue = queue :+ Json.parse(tm.text).as[PlayerInput]
-    case _: CalculateState => data
+    case CalculateState() => data
   }
 }
