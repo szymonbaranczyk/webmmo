@@ -35,7 +35,7 @@ class GameManager extends Actor with LazyLogging {
       sender ! CreatedGame(id, ref)
     case PutPlayerInRandomGame() => val random = Random.nextInt(games.size)
       games.get(games.keys.toList(random)) match {
-        case Some(a) => a ! RelayPlayer(random, sender())
+        case Some(a) => a ! RelayPlayer(games.keys.toList(random), sender())
         case None => logger.error("Game does not exist!")
       }
     case PlayerInRandomGameWithAsker(player, asker) => asker ! player

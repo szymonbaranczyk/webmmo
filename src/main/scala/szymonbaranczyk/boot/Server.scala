@@ -69,9 +69,11 @@ object Server extends LazyLogging with OutputJsonParser {
       }
     } ~ pathPrefix("resources") {
       getFromResourceDirectory("web")
-    } ~ path("greeter") {
-      get {
-        handleWebSocketMessages(constructWebSocketService())
+    } ~ pathPrefix("greeter" / Remaining) { playerId =>
+      pathEnd {
+        get {
+          handleWebSocketMessages(constructWebSocketService())
+        }
       }
     }
 
@@ -87,11 +89,11 @@ object Server extends LazyLogging with OutputJsonParser {
 
   def constructWebSocketService() = {
     implicit val timeout = Timeout(1 second)
-    val game: Game = Await.result((gameManager ? PutPlayerInRandomGame()).mapTo[Game], 1 second)
+    val playerWithGame: PlayerInRandomGame = Await.result((gameManager ? PutPlayerInRandomGame()).mapTo[PlayerInRandomGame], 1 second)
 
-    val dataSource = Source.actorPublisher[GameData](GameDataPublisher.props(executionContext, eventBus, game.id))
-
-    val sink = Sink.combine(Sink.foreach(println), loggingSink)(Broadcast[Message](_))
+    val dataSource = Source.actorPublisher[GameData](GameDataPublisher.props(executionContext, eventBus, playerWithGame.gameId))
+    logger.debug(s"new plyer subscribed to game " + playerWithGame.gameId)
+    val sink = Sink.combine(Sink.foreach((m: Message) => playerWithGame.player ! m), loggingSink)(Broadcast[Message](_))
 
     Flow.fromSinkAndSource(sink,
       dataSource map { d => TextMessage.Strict(Json.prettyPrint(Json.toJson(d))) })

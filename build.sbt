@@ -4,7 +4,7 @@ version := "0.1"
 
 scalaVersion := "2.11.8"
 
-scalacOptions ++= Seq("-feature")
+scalacOptions ++= Seq("-feature", "-language:postfixOps")
 
 libraryDependencies ++= {
   val akkaV = "2.4.8"

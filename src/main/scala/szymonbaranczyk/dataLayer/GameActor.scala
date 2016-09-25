@@ -11,7 +11,7 @@ class GameActor extends Actor {
 
   override def receive = {
     case RelayPlayer(gameId, asker) =>
-      val ref = context.actorOf(Props[GameActor])
+      val ref = context.actorOf(Props[PlayerActor])
       //TODO random strings
       players += ("lol" -> ref)
       sender ! PlayerInRandomGameWithAsker(PlayerInRandomGame(gameId, ref), asker)
