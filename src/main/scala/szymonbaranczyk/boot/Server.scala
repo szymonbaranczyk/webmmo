@@ -37,7 +37,7 @@ object Server extends LazyLogging with OutputJsonParser {
 
   val gameManager = system.actorOf(Props[GameManager])
   //TODO delete mock game
-  gameManager ! CreateGame(1)
+  gameManager ! CreateGame(1, eventBus)
 
   val loggingSink = Sink.foreach((x: Message) => x match {
     case tm: TextMessage.Strict =>
@@ -72,7 +72,7 @@ object Server extends LazyLogging with OutputJsonParser {
     } ~ pathPrefix("greeter" / Remaining) { playerId =>
       pathEnd {
         get {
-          handleWebSocketMessages(constructWebSocketService())
+          handleWebSocketMessages(constructWebSocketService(playerId))
         }
       }
     }
@@ -87,9 +87,9 @@ object Server extends LazyLogging with OutputJsonParser {
     )
   }
 
-  def constructWebSocketService() = {
+  def constructWebSocketService(playerId: String) = {
     implicit val timeout = Timeout(1 second)
-    val playerWithGame: PlayerInRandomGame = Await.result((gameManager ? PutPlayerInRandomGame()).mapTo[PlayerInRandomGame], 1 second)
+    val playerWithGame: PlayerInRandomGame = Await.result((gameManager ? PutPlayerInRandomGame(playerId)).mapTo[PlayerInRandomGame], 1 second)
 
     val dataSource = Source.actorPublisher[GameData](GameDataPublisher.props(executionContext, eventBus, playerWithGame.gameId))
     logger.debug(s"new plyer subscribed to game " + playerWithGame.gameId)

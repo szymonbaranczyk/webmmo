@@ -28,11 +28,11 @@ class ServerSpec extends FlatSpec with BeforeAndAfterAll with ScalatestRouteTest
     val wsClient = WSProbe()
 
     // WS creates a WebSocket request for testing
-    WS("/greeter", wsClient.flow) ~> Server.route ~>
+    WS("/greeter/lol", wsClient.flow) ~> Server.route ~>
       check {
         // check response for WS Upgrade headers
         isWebSocketUpgrade shouldEqual true
-
+        Thread.sleep(5000)
         wsClient.sendCompletion()
         wsClient.expectCompletion()
       }

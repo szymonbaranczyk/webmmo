@@ -13,15 +13,21 @@ import scala.util.Random
 /**
   * Created by Szymon Barańczyk.
   */
-case class CalculateState()
-
+case class GetData()
 class PlayerActor(id: String) extends Actor with InputJsonParser {
   val size = 4000
-  var queue = Queue.empty[PlayerInput]
+  var queue = Queue.empty[PlayerData]
   var data = PlayerData(Random.nextInt(size), Random.nextInt(size), 0, 0, id)
   override def receive: Receive = {
     case tm: TextMessage.Strict =>
-      queue = queue :+ Json.parse(tm.text).as[PlayerInput]
-    case CalculateState() => data
+      val playerInput = Json.parse(tm.text).as[PlayerInput]
+      queue = queue :+ PlayerData(Random.nextInt(size), Random.nextInt(size), 0, 0, id)
+    case GetData() => queue.dequeueOption match {
+      case Some((popped, newQueue)) =>
+        queue = newQueue
+        data = popped
+        sender ! popped
+      case None => sender() ! data
+    }
   }
 }
