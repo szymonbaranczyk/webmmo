@@ -5,6 +5,7 @@ import akka.testkit.{ImplicitSender, TestActorRef, TestKit}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import szymonbaranczyk.dataLayer.GameActor
 import szymonbaranczyk.enterFlow.{PlayerInRandomGameWithAsker, RelayPlayer}
+import szymonbaranczyk.exitFlow.GameDataBus
 
 import scala.concurrent.duration._
 
@@ -21,7 +22,7 @@ class GameActorSpec extends TestKit(ActorSystem("MySpec")) with ImplicitSender
 
   "Actor" should {
     "create a player" in {
-      val actorRef = TestActorRef[GameActor]
+      val actorRef = TestActorRef(new GameActor(new GameDataBus()))
       actorRef ! RelayPlayer(1, actorRef, "player1")
       expectMsgClass(0.1 second, classOf[PlayerInRandomGameWithAsker])
     }
