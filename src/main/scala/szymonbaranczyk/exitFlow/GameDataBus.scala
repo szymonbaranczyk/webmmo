@@ -3,6 +3,7 @@ package szymonbaranczyk.exitFlow
 
 import akka.actor.ActorRef
 import akka.event.{EventBus, LookupClassification}
+import com.typesafe.scalalogging.LazyLogging
 
 final case class GameDataEnvelope(gameData: GameData, gameId: Int)
 
@@ -12,7 +13,7 @@ final case class GameDataEnvelope(gameData: GameData, gameId: Int)
   * Publishes the payload of the MsgEnvelope when the topic of the
   * MsgEnvelope equals the String specified when subscribing.
   */
-class GameDataBus extends EventBus with LookupClassification {
+class GameDataBus extends EventBus with LookupClassification with LazyLogging {
   type Event = GameDataEnvelope
   type Classifier = Int
   type Subscriber = ActorRef
@@ -23,6 +24,7 @@ class GameDataBus extends EventBus with LookupClassification {
   // will be invoked for each event for all subscribers which registered themselves
   // for the event’s classifier
   override protected def publish(event: Event, subscriber: Subscriber): Unit = {
+    logger.debug(s"$event published to $subscriber")
     subscriber ! event.gameData
   }
 
@@ -35,4 +37,6 @@ class GameDataBus extends EventBus with LookupClassification {
   // used internally (i.e. the expected number of different classifiers)
   override protected def mapSize: Int = 128
 
+  override def subscribe(subscriber: ActorRef, to: Int): Boolean = {logger.debug(s"$subscriber subscribed to $to")
+    super.subscribe(subscriber, to)}
 }

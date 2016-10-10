@@ -1,31 +1,34 @@
 package szymonbaranczyk.dataLayer
 
 import akka.actor.{Actor, ActorRef, Props}
+import com.typesafe.scalalogging.LazyLogging
 import szymonbaranczyk.enterFlow.{PlayerInRandomGame, PlayerInRandomGameWithAsker, RelayPlayer}
-import szymonbaranczyk.exitFlow.{GameData, GameDataBus, PlayerData}
+import szymonbaranczyk.exitFlow.{GameData, GameDataBus, GameDataEnvelope, PlayerData}
 import szymonbaranczyk.helper.OutputJsonParser
 
+import scala.concurrent.duration._
 /**
   * Created by Szymon Barańczyk.
   */
 
 case class CalculateGameState()
-
 case class Timeout()
 
-class GameActor(gameDataBus: GameDataBus) extends Actor with OutputJsonParser {
+class GameActor(gameDataBus: GameDataBus, id: Int) extends Actor with OutputJsonParser with LazyLogging {
+  import context._
+  implicit val exContext = context
   var players = Map.empty[String, ActorRef]
   var gameData = GameData(Seq())
-
   override def receive = ExpectingCalculationRequest
 
   def ExpectingCalculationRequest: Receive = {
     case CalculateGameState() =>
       context.become(CalculatingState)
-      //TODO set send Timeout() message after some time
+      context.system.scheduler.scheduleOnce(0.1 second, self, Timeout())
       for ((key, ref) <- players) {
         ref ! GetData()
       }
+    case data:PlayerData => logger.debug("received late PlayerData")
     case a => defaultReceive(a)
   }
 
@@ -34,11 +37,13 @@ class GameActor(gameDataBus: GameDataBus) extends Actor with OutputJsonParser {
       gameData = GameData(gameData.playersData :+ data)
       if (gameData.playersData.length == players.size) {
         context.become(ExpectingCalculationRequest)
-        //TODO send gameData
+        gameDataBus.publish(GameDataEnvelope(gameData,id))
+        gameData=GameData(Seq())
       }
     case Timeout() =>
       context.become(ExpectingCalculationRequest)
-    //TODO send gameData
+      gameDataBus.publish(GameDataEnvelope(gameData,id))
+      gameData=GameData(Seq())
     case a => defaultReceive(a)
   }
 
@@ -47,6 +52,8 @@ class GameActor(gameDataBus: GameDataBus) extends Actor with OutputJsonParser {
       val ref = context.actorOf(Props(new PlayerActor(playerId)))
       players += ("playerId" -> ref)
       sender ! PlayerInRandomGameWithAsker(PlayerInRandomGame(gameId, ref), asker)
+    case Timeout() => logger.debug(s"Game $id - GameState calculated before Timeout")
   }
+
 }
 

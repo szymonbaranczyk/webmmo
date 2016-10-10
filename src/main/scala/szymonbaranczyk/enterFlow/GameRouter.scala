@@ -2,11 +2,11 @@ package szymonbaranczyk.enterFlow
 
 import akka.actor.{Actor, ActorRef, Props}
 import com.typesafe.scalalogging.LazyLogging
-import szymonbaranczyk.dataLayer.GameActor
+import szymonbaranczyk.dataLayer.{CalculateGameState, GameActor}
 import szymonbaranczyk.exitFlow.GameDataBus
 
 import scala.util.Random
-
+import scala.concurrent.duration._
 /**
   * Created by Szymon Barańczyk.
   */
@@ -24,14 +24,16 @@ case class PlayerInRandomGameWithAsker(playerInRandomGame: PlayerInRandomGame, a
 case class RelayPlayer(gameId: Int, asker: ActorRef, playerId: String)
 
 case class Game(id: Int, ref: ActorRef)
-case class PlayerInput(move: String, shot: Boolean)
+case class PlayerInput(acceleration: Int, rotation:Int, shot: Boolean)
+case class Calculate()
 
 class GameManager extends Actor with LazyLogging {
+  import context._
   var games = Map.empty[Int, ActorRef]
-
+  context.system.scheduler.schedule(3 seconds, 3 seconds, self, Calculate())
   override def receive = {
     case CreateGame(id, gameDataBus) =>
-      val ref = context.actorOf(Props(new GameActor(gameDataBus)))
+      val ref = context.actorOf(Props(new GameActor(gameDataBus, id)))
       games += (id -> ref)
       sender ! CreatedGame(id, ref)
     case PutPlayerInRandomGame(playerId) => val random = Random.nextInt(games.size)
@@ -40,7 +42,11 @@ class GameManager extends Actor with LazyLogging {
         case None => logger.error("Game does not exist!")
       }
     case PlayerInRandomGameWithAsker(player, asker) => asker ! player
-
+    case Calculate() => for ((key, ref) <- games) {
+      ref ! CalculateGameState()
+    }
   }
 
 }
+
+

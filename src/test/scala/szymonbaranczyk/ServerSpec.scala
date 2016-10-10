@@ -34,6 +34,7 @@ class ServerSpec extends FlatSpec with BeforeAndAfterAll with ScalatestRouteTest
         isWebSocketUpgrade shouldEqual true
         Thread.sleep(5000)
         wsClient.sendCompletion()
+        println(wsClient.expectMessage())
       }
   }
 

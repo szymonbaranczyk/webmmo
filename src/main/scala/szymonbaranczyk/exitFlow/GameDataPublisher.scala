@@ -2,13 +2,14 @@ package szymonbaranczyk.exitFlow
 
 import akka.actor.Props
 import akka.stream.actor.ActorPublisher
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
 
 /**
   * Created by Szymon Barańczyk.
   */
-class GameDataPublisher(val gameDataBus: GameDataBus, val gameId: Int) extends ActorPublisher[GameData] {
+class GameDataPublisher(val gameDataBus: GameDataBus, val gameId: Int) extends ActorPublisher[GameData] with LazyLogging {
 
   override def preStart = {
     gameDataBus.subscribe(self, gameId)
@@ -18,7 +19,7 @@ class GameDataPublisher(val gameDataBus: GameDataBus, val gameId: Int) extends A
 
     case msg: GameData =>
       if (isActive && totalDemand > 0) {
-        // Pushes the message onto the stream
+        logger.debug("pushed stuff")
         onNext(msg)
       }
   }
@@ -30,4 +31,4 @@ object GameDataPublisher {
 
 case class GameData(playersData: Seq[PlayerData])
 
-case class PlayerData(x: Int, y: Int, rotation: Int, turretRotation: Int, id: String)
+case class PlayerData(x: Int,y: Int,rotation: Int,turretRotation: Int,id: String)

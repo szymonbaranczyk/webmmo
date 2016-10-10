@@ -10,12 +10,14 @@ import szymonbaranczyk.enterFlow.PlayerInput
 trait InputJsonParser {
   implicit val playerInputWrites = new Writes[PlayerInput] {
     def writes(playerInput: PlayerInput) = Json.obj(
-      "move" -> playerInput.move,
+      "acceleration" -> playerInput.acceleration,
+      "rotation" -> playerInput.rotation,
       "shot" -> playerInput.shot
     )
   }
   implicit val playerReads = (
-    (JsPath \ "move").read[String] and
+    (JsPath \ "acceleration").read[Int] and
+      (JsPath \ "rotation").read[Int] and
       (JsPath \ "shot").read[Boolean]
     ) (PlayerInput.apply _)
 

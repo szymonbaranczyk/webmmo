@@ -77,22 +77,13 @@ object Server extends LazyLogging with OutputJsonParser {
       }
     }
 
-  //TODO delete mock gameData
-  system.scheduler.schedule(10 seconds, 10 seconds) {
-    eventBus.publish(
-      GameDataEnvelope(
-        GameData(Seq(PlayerData(1, 2, 3, 4, "player1")))
-        , 1
-      )
-    )
-  }
 
   def constructWebSocketService(playerId: String) = {
     implicit val timeout = Timeout(1 second)
     val playerWithGame: PlayerInRandomGame = Await.result((gameManager ? PutPlayerInRandomGame(playerId)).mapTo[PlayerInRandomGame], 1 second)
 
     val dataSource = Source.actorPublisher[GameData](GameDataPublisher.props(executionContext, eventBus, playerWithGame.gameId))
-    logger.debug(s"new plyer subscribed to game " + playerWithGame.gameId)
+    logger.debug(s"new player subscribed to game " + playerWithGame.gameId)
     val sink = Sink.combine(Sink.foreach((m: Message) => playerWithGame.player ! m), loggingSink)(Broadcast[Message](_))
 
     Flow.fromSinkAndSource(sink,
