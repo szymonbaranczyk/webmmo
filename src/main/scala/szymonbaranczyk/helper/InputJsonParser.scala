@@ -12,12 +12,14 @@ trait InputJsonParser {
     def writes(playerInput: PlayerInput) = Json.obj(
       "acceleration" -> playerInput.acceleration,
       "rotation" -> playerInput.rotation,
+      "turretRotation" -> playerInput.turretRotation,
       "shot" -> playerInput.shot
     )
   }
   implicit val playerReads = (
     (JsPath \ "acceleration").read[Int] and
       (JsPath \ "rotation").read[Int] and
+      (JsPath \ "turretRotation").read[Int] and
       (JsPath \ "shot").read[Boolean]
     ) (PlayerInput.apply _)
 

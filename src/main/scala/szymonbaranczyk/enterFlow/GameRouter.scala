@@ -24,7 +24,7 @@ case class PlayerInRandomGameWithAsker(playerInRandomGame: PlayerInRandomGame, a
 case class RelayPlayer(gameId: Int, asker: ActorRef, playerId: String)
 
 case class Game(id: Int, ref: ActorRef)
-case class PlayerInput(acceleration: Int, rotation:Int, shot: Boolean)
+case class PlayerInput(acceleration: Int, rotation:Int, turretRotation:Int, shot: Boolean)
 case class Calculate()
 
 class GameManager extends Actor with LazyLogging {

@@ -24,7 +24,7 @@ class GameDataBus extends EventBus with LookupClassification with LazyLogging {
   // will be invoked for each event for all subscribers which registered themselves
   // for the event’s classifier
   override protected def publish(event: Event, subscriber: Subscriber): Unit = {
-    logger.debug(s"$event published to $subscriber")
+    //logger.debug(s"$event published to $subscriber")
     subscriber ! event.gameData
   }
 

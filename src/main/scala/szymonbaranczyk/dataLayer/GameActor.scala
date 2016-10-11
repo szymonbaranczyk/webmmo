@@ -52,7 +52,7 @@ class GameActor(gameDataBus: GameDataBus, id: Int) extends Actor with OutputJson
       val ref = context.actorOf(Props(new PlayerActor(playerId)))
       players += ("playerId" -> ref)
       sender ! PlayerInRandomGameWithAsker(PlayerInRandomGame(gameId, ref), asker)
-    case Timeout() => logger.debug(s"Game $id - GameState calculated before Timeout")
+    case Timeout() => //logger.debug(s"Game $id - GameState calculated before Timeout")
   }
 
 }

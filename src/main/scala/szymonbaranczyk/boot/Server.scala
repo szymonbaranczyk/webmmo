@@ -12,6 +12,7 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
+import szymonbaranczyk.dataLayer.CloseHandle
 import szymonbaranczyk.enterFlow._
 import szymonbaranczyk.exitFlow._
 import szymonbaranczyk.helper.OutputJsonParser
@@ -81,8 +82,7 @@ object Server extends LazyLogging with OutputJsonParser {
   def constructWebSocketService(playerId: String) = {
     implicit val timeout = Timeout(1 second)
     val playerWithGame: PlayerInRandomGame = Await.result((gameManager ? PutPlayerInRandomGame(playerId)).mapTo[PlayerInRandomGame], 1 second)
-
-    val dataSource = Source.actorPublisher[GameData](GameDataPublisher.props(executionContext, eventBus, playerWithGame.gameId))
+    val dataSource = Source.actorPublisher[GameData](GameDataPublisher.props(executionContext, eventBus, playerWithGame.gameId, playerWithGame.player))
     logger.debug(s"new player subscribed to game " + playerWithGame.gameId)
     val sink = Sink.combine(Sink.foreach((m: Message) => playerWithGame.player ! m), loggingSink)(Broadcast[Message](_))
 
