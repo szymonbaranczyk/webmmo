@@ -9,14 +9,19 @@ import szymonbaranczyk.exitFlow.{CloseConnection, PlayerData}
 import szymonbaranczyk.helper.InputJsonParser
 
 import scala.collection.immutable.Queue
-import scala.util.Random
 import scala.concurrent.duration._
+import scala.util.Random
 /**
   * Created by Szymon Barańczyk.
   */
 case class GetData()
 
+case class ReceiveTimeout()
 class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLogging {
+
+  import context._
+
+  implicit val exContext = context
   val size = 4000
   val speed = 2
   val speedReverse = -1
@@ -25,13 +30,15 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
   var queue = Queue.empty[PlayerData]
   var data = PlayerData(Random.nextInt(size), Random.nextInt(size), 0, 0, id)
   var closeHandle: Option[ActorRef] = None
-  context.setReceiveTimeout(5 seconds)
+  var cancellable = system.scheduler.scheduleOnce(5 seconds, self, ReceiveTimeout())
+
   override def receive: Receive = {
     case tm: TextMessage.Strict =>
       val playerInput = Json.parse(tm.text).as[PlayerInput]
       data = move(data,playerInput)
       queue = queue :+ data
-      context.setReceiveTimeout(5 seconds)
+      cancellable.cancel()
+      cancellable = system.scheduler.scheduleOnce(5 seconds, self, ReceiveTimeout())
     case GetData() => queue.dequeueOption match {
       case Some((popped, newQueue)) =>
         queue = newQueue
@@ -39,15 +46,14 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
       case None => sender() ! data
     }
     case CloseHandle(ref) =>
-      logger.debug("received handle")
+      logger.debug(s"  ${self.path.toSerializationFormat} received handle")
       closeHandle = Some(ref)
-    case ReceiveTimeout => closeHandle match {
+    case ReceiveTimeout() => closeHandle match {
       case Some(ref) => ref ! CloseConnection()
         logger.debug("closing publisher")
-      case None => logger.error("can't close GameDataPublisher")
+      case None => logger.error(s"  ${self.path.toSerializationFormat} can't close GameDataPublisher")
     }
   }
-
   def move(playerData: PlayerData, playerInput: PlayerInput) = {
     val moveDir = playerInput.acceleration match {
       case 1 => speed
