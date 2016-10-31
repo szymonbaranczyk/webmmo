@@ -1,5 +1,7 @@
 var stage;
-function Tank(stage,location){
+var tanks = [];
+function Tank(stage,location,id){
+    this.id=id;
     this.triangle = new createjs.Shape();
     this.triangle.graphics.beginFill("DeepSkyBlue").moveTo(25, 40).lineTo(25, -40).lineTo(-25, -40).lineTo(-25, 40).lineTo(25, 40);
     this.triangle.x = location.x;
@@ -7,7 +9,7 @@ function Tank(stage,location){
     stage.addChild(this.triangle);
     this.turret =  new createjs.Shape();
     this.turret.graphics.beginFill("#ff0000").drawCircle(0,0, 10);
-    this.turret.graphics.beginFill("#ff0000").drawRect(-3, -40, 6,42);
+    this.turret.graphics.beginFill("#ff0000").drawRect(-3, 10, 6,42);
     this.turret.x = location.x;
     this.turret.y = location.y;
     stage.addChild(this.turret);
@@ -19,9 +21,9 @@ function Tank(stage,location){
     });
     this.move = function(x,y,rotation,turretRotation){
         createjs.Tween.get(this.triangle)
-            .to({ x: x, y:y, rotation:rotation }, 1000);
+            .to({ x: x, y:y, rotation:rotation }, 100);
         createjs.Tween.get(this.turret)
-            .to({ x: x, y:y, rotation:turretRotation }, 1000);
+            .to({ x: x, y:y, rotation:turretRotation }, 100);
     }
 }
 function randomFloat(min,max){
@@ -63,11 +65,12 @@ function explode(stage,location){
 window.onload = function() {
     function init() {
         stage = new createjs.Stage("demoCanvas");
-        var tank = new Tank(stage, {x:100,y:100});
+
         createjs.Ticker.setFPS(60);
         createjs.Ticker.addEventListener("tick", stage);
-        tank.move(100,200,0,30);
-        explode(stage,{x:100,y:100})
+        // var tank = new Tank(stage, {x:100,y:100},"lol");
+        // tank.move(100,200,0,30);
+        // explode(stage,{x:100,y:100})
     }
     init();
 };

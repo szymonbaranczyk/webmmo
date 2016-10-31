@@ -2,7 +2,7 @@ package szymonbaranczyk.dataLayer
 
 import akka.actor.{Actor, ActorRef, Props}
 import com.typesafe.scalalogging.LazyLogging
-import szymonbaranczyk.enterFlow.{PlayerInRandomGame, PlayerInRandomGameWithAsker, RelayPlayer}
+import szymonbaranczyk.enterFlow.{PlayerInRandomGame, PlayerInRandomGameWithAsker, CreatePlayer}
 import szymonbaranczyk.exitFlow.{GameData, GameDataBus, GameDataEnvelope, PlayerData}
 import szymonbaranczyk.helper.OutputJsonParser
 
@@ -11,8 +11,7 @@ import scala.concurrent.duration._
   * Created by Szymon Barańczyk.
   */
 
-case class CalculateGameState()
-case class Timeout()
+
 
 class GameActor(gameDataBus: GameDataBus, id: Int) extends Actor with OutputJsonParser with LazyLogging {
   import context._
@@ -23,10 +22,12 @@ class GameActor(gameDataBus: GameDataBus, id: Int) extends Actor with OutputJson
 
   def ExpectingCalculationRequest: Receive = {
     case CalculateGameState() =>
-      context.become(CalculatingState)
-      context.system.scheduler.scheduleOnce(0.1 second, self, Timeout())
-      for ((key, ref) <- players) {
-        ref ! GetData()
+      if(players.nonEmpty) {
+        context.become(CalculatingState)
+        context.system.scheduler.scheduleOnce(0.1 second, self, Timeout())
+        for ((key, ref) <- players) {
+          ref ! GetData()
+        }
       }
     case data:PlayerData => logger.debug("received late PlayerData")
     case a => defaultReceive(a)
@@ -48,12 +49,17 @@ class GameActor(gameDataBus: GameDataBus, id: Int) extends Actor with OutputJson
   }
 
   def defaultReceive: Receive = {
-    case RelayPlayer(gameId, asker, playerId) =>
+    case CreatePlayer(gameId, asker, playerId) =>
       val ref = context.actorOf(Props(new PlayerActor(playerId)))
-      players += ("playerId" -> ref)
+      players += (playerId -> ref)
       sender ! PlayerInRandomGameWithAsker(PlayerInRandomGame(gameId, ref), asker)
+    case DeletePlayer(playerId) => players -= playerId
     case Timeout() => //logger.debug(s"Game $id - GameState calculated before Timeout")
   }
 
 }
+
+case class CalculateGameState()
+case class Timeout()
+case class DeletePlayer(id:String)
 

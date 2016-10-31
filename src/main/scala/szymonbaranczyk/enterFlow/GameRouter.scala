@@ -21,7 +21,7 @@ case class PlayerInRandomGame(gameId: Int, player: ActorRef)
 
 case class PlayerInRandomGameWithAsker(playerInRandomGame: PlayerInRandomGame, asker: ActorRef)
 
-case class RelayPlayer(gameId: Int, asker: ActorRef, playerId: String)
+case class CreatePlayer(gameId: Int, asker: ActorRef, playerId: String)
 
 case class Game(id: Int, ref: ActorRef)
 case class PlayerInput(acceleration: Int, rotation:Int, turretRotation:Int, shot: Boolean)
@@ -30,7 +30,7 @@ case class Calculate()
 class GameManager extends Actor with LazyLogging {
   import context._
   var games = Map.empty[Int, ActorRef]
-  context.system.scheduler.schedule(3 seconds, 3 seconds, self, Calculate())
+  context.system.scheduler.schedule(0.1 seconds, 0.1 seconds, self, Calculate())
   override def receive = {
     case CreateGame(id, gameDataBus) =>
       val ref = context.actorOf(Props(new GameActor(gameDataBus, id)))
@@ -38,7 +38,7 @@ class GameManager extends Actor with LazyLogging {
       sender ! CreatedGame(id, ref)
     case PutPlayerInRandomGame(playerId) => val random = Random.nextInt(games.size)
       games.get(games.keys.toList(random)) match {
-        case Some(a) => a ! RelayPlayer(games.keys.toList(random), sender(), playerId)
+        case Some(a) => a ! CreatePlayer(games.keys.toList(random), sender(), playerId)
         case None => logger.error("Game does not exist!")
       }
     case PlayerInRandomGameWithAsker(player, asker) => asker ! player

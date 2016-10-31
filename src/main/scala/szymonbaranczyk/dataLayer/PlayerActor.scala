@@ -1,6 +1,6 @@
 package szymonbaranczyk.dataLayer
 
-import akka.actor.{Actor, ActorRef, ReceiveTimeout}
+import akka.actor.{Actor, ActorRef, PoisonPill}
 import akka.http.scaladsl.model.ws.TextMessage
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json
@@ -14,18 +14,14 @@ import scala.util.Random
 /**
   * Created by Szymon Barańczyk.
   */
-case class GetData()
 
-case class ReceiveTimeout()
+
 class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLogging {
-
   import context._
-
-  implicit val exContext = context
-  val size = 4000
-  val speed = 2
-  val speedReverse = -1
-  val rotationSpeed = 1
+  val size = 1000
+  val speed = 5
+  val speedReverse = -3
+  val rotationSpeed = 2
   val turretRotationSpeed = 2
   var queue = Queue.empty[PlayerData]
   var data = PlayerData(Random.nextInt(size), Random.nextInt(size), 0, 0, id)
@@ -51,9 +47,12 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
     case ReceiveTimeout() => closeHandle match {
       case Some(ref) => ref ! CloseConnection()
         logger.debug("closing publisher")
+        parent ! DeletePlayer(id)
+        self ! PoisonPill
       case None => logger.error(s"  ${self.path.toSerializationFormat} can't close GameDataPublisher")
     }
   }
+
   def move(playerData: PlayerData, playerInput: PlayerInput) = {
     val moveDir = playerInput.acceleration match {
       case 1 => speed
@@ -74,10 +73,12 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
       x = (Math.sin(Math.toRadians(playerData.rotation)) * moveDir + playerData.x).toInt,
       y = (Math.cos(Math.toRadians(playerData.rotation)) * moveDir + playerData.y).toInt,
       rotation = playerData.rotation + rotationDir,
-      turretRotation = playerData.rotation + turretDir,
+      turretRotation = playerData.turretRotation + turretDir,
       id
     )
   }
 }
 
 case class CloseHandle(ref:ActorRef)
+case class ReceiveTimeout()
+case class GetData()
