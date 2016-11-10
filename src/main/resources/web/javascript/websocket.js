@@ -34,7 +34,8 @@ function connect(login) {
       console.log("closed");
     };
 }
-connect(makeId());
+var login = makeId();
+connect(login);
 var left=false;
 var right=false;
 var down=false;
@@ -80,15 +81,46 @@ window.addEventListener('keyup', function(event) {
 setInterval(function () {
     var acc = up ? 1 : (down ? -1 : 0);
     var rot = left ? 1 : (right ? -1 : 0);
+
+    var mytank = tanks.filter(function(t){
+        return t.id === login;
+    });
+    var degree = Math.atan((mytank[0].chassis.y-stage.mouseY)/(mytank[0].chassis.x-stage.mouseX)) * (180/Math.PI);
+    if(mytank[0].chassis.x<stage.mouseX)
+    {
+        if(mytank[0].chassis.y<stage.mouseY){
+            degree= 270+degree;
+        }
+        if(mytank[0].chassis.y>stage.mouseY){
+            degree = 270+degree;
+        }
+    }else{
+        if(mytank[0].chassis.y<stage.mouseY){
+            degree += 90;
+        }
+        if(mytank[0].chassis.y>stage.mouseY){
+            degree += 90;
+        }
+    }
+    var turretDegree = mytank[0].turret.rotation >= 0? mytank[0].turret.rotation % 360 : 360 + mytank[0].turret.rotation % 360;
+    var turRot = clockwiseDistance(turretDegree, degree) > counterClockwiseDistance(turretDegree, degree)? -1 : 1;
+    if(Math.abs(turretDegree - degree) < 10){
+        turRot = 0;
+    }
     var input = {
         "acceleration" : acc,
         "rotation" : rot,
-        "turretRotation" : 0,
+        "turretRotation" : turRot,
         "shot": false
     };
-    console.log(JSON.stringify(input));
     socket.send(JSON.stringify(input));
 },100);
+function clockwiseDistance(x,y){
+    return y>x ? y-x: 360-(x-y);
+}
+function counterClockwiseDistance(x,y){
+    return y>x ? 360-(y-x): x-y;
+}
 
 function makeId()
 {

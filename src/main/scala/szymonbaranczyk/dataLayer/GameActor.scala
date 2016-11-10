@@ -17,7 +17,9 @@ class GameActor(gameDataBus: GameDataBus, id: Int) extends Actor with OutputJson
   import context._
   implicit val exContext = context
   var players = Map.empty[String, ActorRef]
-  var gameData = GameData(Seq())
+  var bullets = Map.empty[Int, ActorRef]
+  var gameData = GameData(Seq(),Seq())
+  var bulletId = 0
   override def receive = ExpectingCalculationRequest
 
   def ExpectingCalculationRequest: Receive = {
@@ -28,23 +30,35 @@ class GameActor(gameDataBus: GameDataBus, id: Int) extends Actor with OutputJson
         for ((key, ref) <- players) {
           ref ! GetData()
         }
+        for ((key, ref) <- bullets) {
+          ref ! CalculateStep()
+          ref ! CheckCollisions(players)
+        }
       }
-    case data:PlayerData => logger.debug("received late PlayerData")
+    case _:PlayerData | BulletState => logger.debug("received late PlayerData")
     case a => defaultReceive(a)
   }
 
   def CalculatingState: Receive = {
-    case data: PlayerData =>
-      gameData = GameData(gameData.playersData :+ data)
-      if (gameData.playersData.length == players.size) {
+    case playerData: PlayerData =>
+      gameData = GameData(gameData.playersData :+ playerData, gameData.bulletData)
+      if (gameData.playersData.length == players.size && gameData.bulletData.length == bullets.size) {
         context.become(ExpectingCalculationRequest)
         gameDataBus.publish(GameDataEnvelope(gameData,id))
-        gameData=GameData(Seq())
+        gameData=GameData(Seq(), Seq())
+      }
+    case bulletState: BulletState =>
+      gameData = GameData(gameData.playersData, gameData.bulletData:+bulletState)
+      if (gameData.playersData.length == players.size && gameData.bulletData.length == bullets.size) {
+        context.become(ExpectingCalculationRequest)
+        gameDataBus.publish(GameDataEnvelope(gameData,id))
+        gameData=GameData(Seq(), Seq())
       }
     case Timeout() =>
       context.become(ExpectingCalculationRequest)
       gameDataBus.publish(GameDataEnvelope(gameData,id))
-      gameData=GameData(Seq())
+      gameData=GameData(Seq(),Seq())
+      logger.debug("timeouted")
     case a => defaultReceive(a)
   }
 
@@ -54,12 +68,22 @@ class GameActor(gameDataBus: GameDataBus, id: Int) extends Actor with OutputJson
       players += (playerId -> ref)
       sender ! PlayerInRandomGameWithAsker(PlayerInRandomGame(gameId, ref), asker)
     case DeletePlayer(playerId) => players -= playerId
+    case DeleteBullet(bId) => bullets -= bId
     case Timeout() => //logger.debug(s"Game $id - GameState calculated before Timeout")
+    case CalculateGameState() => logger.debug("can't calculate state now")
+    case Collide(pId) => players.get(pId) match {
+      case Some(ref) => ref ! Hit()
+      case None =>
+    }
   }
+  def createBullet(x:Int,y:Int,xSpeed:Int,ySpeed:Int) = {
 
+  }
 }
 
 case class CalculateGameState()
 case class Timeout()
 case class DeletePlayer(id:String)
+
+case class Hit()
 

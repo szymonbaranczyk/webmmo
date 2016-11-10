@@ -2,6 +2,7 @@ package szymonbaranczyk.helper
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import szymonbaranczyk.dataLayer.BulletState
 import szymonbaranczyk.exitFlow.{GameData, PlayerData}
 
 /**
@@ -15,12 +16,20 @@ trait OutputJsonParser {
       "y" -> playerData.y,
       "rotation" -> playerData.rotation,
       "turretRotation" -> playerData.turretRotation,
-      "id" -> playerData.id
+      "id" -> playerData.id,
+      "meta" -> playerData.meta
+    )
+  }
+  implicit val bulletWrites = new Writes[BulletState] {
+    def writes(bulletState: BulletState) = Json.obj(
+      "x" -> bulletState.x,
+      "y" -> bulletState.y
     )
   }
   implicit val gameWrites = new Writes[GameData] {
     def writes(gameData: GameData) = Json.obj(
-      "playersData" -> gameData.playersData
+      "playersData" -> gameData.playersData,
+      "bulletData" -> gameData.bulletData
     )
   }
   implicit val playerReads = (
@@ -28,9 +37,17 @@ trait OutputJsonParser {
       (JsPath \ "y").read[Int] and
       (JsPath \ "rotation").read[Int] and
       (JsPath \ "turretRotation").read[Int] and
-      (JsPath \ "id").read[String]
+      (JsPath \ "id").read[String] and
+      (JsPath \ "meta").read[String]
     ) (PlayerData.apply _)
-  implicit val gameReads: Reads[GameData] =
-    (JsPath \ "playersData").read[Seq[PlayerData]].map(seq => GameData(seq))
+
+  implicit val bulletReads = (
+    (JsPath \ "x").read[Int] and
+      (JsPath \ "y").read[Int]
+    ) (BulletState.apply _)
+  implicit val gameReads: Reads[GameData] = (
+    (JsPath \ "playersData").read[Seq[PlayerData]] and
+      (JsPath \ "bulletData").read[Seq[BulletState]]
+    ) (GameData.apply _)
 
 }

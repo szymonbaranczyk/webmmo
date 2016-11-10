@@ -2,25 +2,26 @@ var stage;
 var tanks = [];
 function Tank(stage,location,id){
     this.id=id;
-    this.triangle = new createjs.Shape();
-    this.triangle.graphics.beginFill("DeepSkyBlue").moveTo(25, 40).lineTo(25, -40).lineTo(-25, -40).lineTo(-25, 40).lineTo(25, 40);
-    this.triangle.x = location.x;
-    this.triangle.y = location.y;
-    stage.addChild(this.triangle);
+    this.chassis = new createjs.Shape();
+    this.chassis.graphics.beginFill("#003300").moveTo(25, 40).lineTo(25, -40).lineTo(-25, -40).lineTo(-25, 40).lineTo(25, 40);
+    this.chassis.graphics.beginFill("#404040").moveTo(-15,-25).lineTo(15,-25).lineTo(15,-35).lineTo(-15,-35).lineTo(-15,-25);
+    this.chassis.x = location.x;
+    this.chassis.y = location.y;
+    stage.addChild(this.chassis);
     this.turret =  new createjs.Shape();
-    this.turret.graphics.beginFill("#ff0000").drawCircle(0,0, 10);
-    this.turret.graphics.beginFill("#ff0000").drawRect(-3, 10, 6,42);
+    this.turret.graphics.beginFill("#006600").drawCircle(0,0, 10);
+    this.turret.graphics.beginFill("#006600").drawRect(-3, 10, 6,42);
     this.turret.x = location.x;
     this.turret.y = location.y;
     stage.addChild(this.turret);
-    this.triangle.on("click", function(evt) {
+    this.chassis.on("click", function(evt) {
         explode(stage,{x:evt.stageX,y:evt.stageY});
     });
     this.turret.on("click", function(evt) {
         explode(stage,{x:evt.stageX,y:evt.stageY});
     });
     this.move = function(x,y,rotation,turretRotation){
-        createjs.Tween.get(this.triangle)
+        createjs.Tween.get(this.chassis)
             .to({ x: x, y:y, rotation:rotation }, 100);
         createjs.Tween.get(this.turret)
             .to({ x: x, y:y, rotation:turretRotation }, 100);

@@ -3,7 +3,7 @@ package szymonbaranczyk.exitFlow
 import akka.actor.{ActorRef, Props}
 import akka.stream.actor.ActorPublisher
 import com.typesafe.scalalogging.LazyLogging
-import szymonbaranczyk.dataLayer.CloseHandle
+import szymonbaranczyk.dataLayer.{BulletState, CloseHandle}
 
 import scala.concurrent.ExecutionContext
 
@@ -34,6 +34,6 @@ object GameDataPublisher {
   def props(implicit ctx: ExecutionContext, gameDataBus: GameDataBus, gameId: Int, playerActor:ActorRef): Props = Props(new GameDataPublisher(gameDataBus, gameId,playerActor))
 }
 
-case class GameData(playersData: Seq[PlayerData])
+case class GameData(playersData: Seq[PlayerData], bulletData: Seq[BulletState])
 
-case class PlayerData(x: Int,y: Int,rotation: Int,turretRotation: Int,id: String)
+case class PlayerData(x: Int,y: Int,rotation: Int,turretRotation: Int,id: String, meta:String)

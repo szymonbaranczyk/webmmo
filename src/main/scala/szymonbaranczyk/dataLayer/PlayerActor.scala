@@ -24,10 +24,11 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
   val rotationSpeed = 2
   val turretRotationSpeed = 2
   var queue = Queue.empty[PlayerData]
-  var data = PlayerData(Random.nextInt(size), Random.nextInt(size), 0, 0, id)
+  var lastDequeued: Option[PlayerData] = None
+  var data = PlayerData(Random.nextInt(size), Random.nextInt(size), 0, 0, id, "")
   var closeHandle: Option[ActorRef] = None
   var cancellable = system.scheduler.scheduleOnce(5 seconds, self, ReceiveTimeout())
-
+  var nextMeta = ""
   override def receive: Receive = {
     case tm: TextMessage.Strict =>
       val playerInput = Json.parse(tm.text).as[PlayerInput]
@@ -39,20 +40,28 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
       case Some((popped, newQueue)) =>
         queue = newQueue
         sender ! popped
+        lastDequeued = Some(popped)
       case None => sender() ! data
     }
+    case Hit() => nextMeta="hit"
+    case GetDataWithoutCalc() =>
+      lastDequeued match {
+        case Some(p) => sender() ! p
+        case None => logger.error("no last dequeuedElement")
+      }
     case CloseHandle(ref) =>
       logger.debug(s"  ${self.path.toSerializationFormat} received handle")
       closeHandle = Some(ref)
-    case ReceiveTimeout() => closeHandle match {
+    case ReceiveTimeout() => self ! PoisonPill
+  }
+  override def postStop() = {
+    closeHandle match {
       case Some(ref) => ref ! CloseConnection()
         logger.debug("closing publisher")
         parent ! DeletePlayer(id)
-        self ! PoisonPill
       case None => logger.error(s"  ${self.path.toSerializationFormat} can't close GameDataPublisher")
     }
   }
-
   def move(playerData: PlayerData, playerInput: PlayerInput) = {
     val moveDir = playerInput.acceleration match {
       case 1 => speed
@@ -69,16 +78,21 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
       case -1 => -turretRotationSpeed
       case 0 => 0
     }
-    PlayerData(
+    val ret = PlayerData(
       x = (Math.sin(Math.toRadians(playerData.rotation)) * moveDir + playerData.x).toInt,
       y = (Math.cos(Math.toRadians(playerData.rotation)) * moveDir + playerData.y).toInt,
       rotation = playerData.rotation + rotationDir,
-      turretRotation = playerData.turretRotation + turretDir,
-      id
+      turretRotation = playerData.turretRotation + turretDir - rotationDir,
+      id,
+      nextMeta
     )
+    nextMeta = ""
+    ret
   }
 }
 
 case class CloseHandle(ref:ActorRef)
 case class ReceiveTimeout()
 case class GetData()
+
+case class GetDataWithoutCalc()

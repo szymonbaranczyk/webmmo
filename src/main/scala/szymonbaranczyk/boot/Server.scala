@@ -42,7 +42,7 @@ object Server extends LazyLogging with OutputJsonParser {
 
   val loggingSink = Sink.foreach((x: Message) => x match {
     case tm: TextMessage.Strict =>
-      logger.info("you got mail!")
+      //logger.info("you got mail!")
     case tm: TextMessage.Streamed =>
       logger.error("There is TextMessage streamed!")
     case bm: BinaryMessage =>
