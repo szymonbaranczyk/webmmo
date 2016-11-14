@@ -23,7 +23,8 @@ trait OutputJsonParser {
   implicit val bulletWrites = new Writes[BulletState] {
     def writes(bulletState: BulletState) = Json.obj(
       "x" -> bulletState.x,
-      "y" -> bulletState.y
+      "y" -> bulletState.y,
+      "id" -> bulletState.id
     )
   }
   implicit val gameWrites = new Writes[GameData] {
@@ -43,7 +44,8 @@ trait OutputJsonParser {
 
   implicit val bulletReads = (
     (JsPath \ "x").read[Int] and
-      (JsPath \ "y").read[Int]
+      (JsPath \ "y").read[Int] and
+      (JsPath \ "id").read[Int]
     ) (BulletState.apply _)
   implicit val gameReads: Reads[GameData] = (
     (JsPath \ "playersData").read[Seq[PlayerData]] and

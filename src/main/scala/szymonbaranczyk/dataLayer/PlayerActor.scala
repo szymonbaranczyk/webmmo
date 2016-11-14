@@ -10,30 +10,48 @@ import szymonbaranczyk.helper.InputJsonParser
 
 import scala.collection.immutable.Queue
 import scala.concurrent.duration._
+import scala.math._
 import scala.util.Random
+
 /**
   * Created by Szymon Barańczyk.
   */
 
 
 class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLogging {
+
   import context._
+
   val size = 1000
   val speed = 5
   val speedReverse = -3
   val rotationSpeed = 2
   val turretRotationSpeed = 2
+  val turretLength = 52
+  val bulletSpeed = 10
   var queue = Queue.empty[PlayerData]
   var lastDequeued: Option[PlayerData] = None
   var data = PlayerData(Random.nextInt(size), Random.nextInt(size), 0, 0, id, "")
   var closeHandle: Option[ActorRef] = None
   var cancellable = system.scheduler.scheduleOnce(5 seconds, self, ReceiveTimeout())
   var nextMeta = ""
+
   override def receive: Receive = {
     case tm: TextMessage.Strict =>
       val playerInput = Json.parse(tm.text).as[PlayerInput]
-      data = move(data,playerInput)
+      data = move(data, playerInput)
       queue = queue :+ data
+      if (playerInput.shot) lastDequeued match {
+        case Some(d) => parent ! CreateBullet(
+          (sin(toRadians(d.turretRotation)) * turretLength + d.x).toInt,
+          (cos(toRadians(d.turretRotation)) * turretLength + d.y).toInt,
+          (sin(toRadians(d.turretRotation)) * bulletSpeed).toInt,
+          (cos(toRadians(d.turretRotation)) * bulletSpeed).toInt,
+          id
+        )
+        case None =>
+      }
+
       cancellable.cancel()
       cancellable = system.scheduler.scheduleOnce(5 seconds, self, ReceiveTimeout())
     case GetData() => queue.dequeueOption match {
@@ -43,7 +61,7 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
         lastDequeued = Some(popped)
       case None => sender() ! data
     }
-    case Hit() => nextMeta="hit"
+    case Hit() => nextMeta = "hit"
     case GetDataWithoutCalc() =>
       lastDequeued match {
         case Some(p) => sender() ! p
@@ -54,14 +72,7 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
       closeHandle = Some(ref)
     case ReceiveTimeout() => self ! PoisonPill
   }
-  override def postStop() = {
-    closeHandle match {
-      case Some(ref) => ref ! CloseConnection()
-        logger.debug("closing publisher")
-        parent ! DeletePlayer(id)
-      case None => logger.error(s"  ${self.path.toSerializationFormat} can't close GameDataPublisher")
-    }
-  }
+
   def move(playerData: PlayerData, playerInput: PlayerInput) = {
     val moveDir = playerInput.acceleration match {
       case 1 => speed
@@ -89,10 +100,21 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
     nextMeta = ""
     ret
   }
+
+  override def postStop() = {
+    closeHandle match {
+      case Some(ref) => ref ! CloseConnection()
+        logger.debug("closing publisher")
+        parent ! DeletePlayer(id)
+      case None => logger.error(s"  ${self.path.toSerializationFormat} can't close GameDataPublisher")
+    }
+  }
 }
 
-case class CloseHandle(ref:ActorRef)
+case class CloseHandle(ref: ActorRef)
+
 case class ReceiveTimeout()
+
 case class GetData()
 
 case class GetDataWithoutCalc()

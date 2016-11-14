@@ -12,24 +12,29 @@ class BulletActor(id: Int, var state: BulletState, xSpeed: Int, ySpeed: Int, own
 
   override def receive = {
     case CheckCollisions(players) =>
-      if (state.x < 0 || state.y < 0 || state.x > size || state.y > size) self ! PoisonPill
+      if (state.x < 0 || state.y < 0 || state.x > size || state.y > size) {
+        self ! PoisonPill
+      }
       else for (p <- players) p._2 ! GetDataWithoutCalc()
-
     case CalculateStep() =>
-      state = BulletState(state.x + xSpeed, state.y + ySpeed)
+      state = BulletState(state.x + xSpeed, state.y + ySpeed, id)
       sender ! state
     case p: PlayerData =>
-      if (Math.abs(p.x - state.x) < 100 && Math.abs(p.y - state.y) < 100 && !p.id.equals(owner)) {
+      if (Math.abs(p.x - state.x) < 45 && Math.abs(p.y - state.y) < 45 && !p.id.equals(owner)) {
         context.parent ! Collide(p.id)
         self ! PoisonPill
       }
 
   }
-  override def postStop(): Unit = context.parent ! DeleteBullet(id)
+
+  override def postStop(): Unit = {
+    context.parent ! DeleteBullet(id)
+  }
 }
 
 case class CalculateStep()
-case class BulletState(x:Int,y:Int)
+
+case class BulletState(x: Int, y: Int, id: Int)
 
 case class CheckCollisions(players : Map[String,ActorRef])
 

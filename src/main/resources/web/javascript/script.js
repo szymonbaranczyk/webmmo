@@ -1,5 +1,6 @@
 var stage;
 var tanks = [];
+var bullets = [];
 function Tank(stage,location,id){
     this.id=id;
     this.chassis = new createjs.Shape();
@@ -25,12 +26,33 @@ function Tank(stage,location,id){
             .to({ x: x, y:y, rotation:rotation }, 100);
         createjs.Tween.get(this.turret)
             .to({ x: x, y:y, rotation:turretRotation }, 100);
-    }
+    };
+    this.kill = function () {
+        stage.removeChild(this.chassis);
+        stage.removeChild(this.turret);
+    };
+}
+function Bullet(stage, location, id) {
+    this.id = id;
+    this.bullet = new createjs.Shape();
+    this.bullet.graphics.beginFill("#000000").drawCircle(0, 0, 5);
+    this.bullet.x = location.x;
+    this.bullet.y = location.y;
+    stage.addChild(this.bullet);
+    this.move = function (x, y) {
+        createjs.Tween.get(this.bullet)
+            .to({x: x, y: y}, 100);
+    };
+    this.kill = function () {
+        stage.removeChild(this.bullet);
+    };
 }
 function randomFloat(min,max){
     return (Math.random() * max) + min;
 }
 function explode(stage,location){
+    console.log("EXPLODING");
+    console.log(location.x + " " + location.y + " " + stage);
     var count=10;
     for (var angle=0; angle<360; angle += Math.round(360/count)){
         var params={};

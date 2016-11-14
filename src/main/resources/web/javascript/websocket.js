@@ -26,9 +26,60 @@ function connect(login) {
                 tank=new Tank(stage,{x:player.x,y:player.y},player.id);
                 tanks.push(tank);
             }else{
-                tank.move(player.x,player.y,-player.rotation,player.turretRotation)
+                tank.move(player.x, player.y, -player.rotation, -player.turretRotation)
             }
-        })
+        });
+        data.bulletData.forEach(function (bulletData) {
+            var bullet = undefined;
+            bullets.forEach(function (b) {
+                if (b.id === bulletData.id) {
+                    bullet = b;
+                }
+            });
+            if (bullet == null) {
+                bullet = new Bullet(stage, {x: bulletData.x, y: bulletData.y}, bulletData.id);
+                bullets.push(bullet);
+            } else {
+                bullet.move(bulletData.x, bulletData.y);
+            }
+        });
+        if (data.playersData.length != tanks.length) {
+            var missingTanks = [];
+            tanks.forEach(function (t) {
+                exist = false;
+                data.playersData.forEach(function (p) {
+                    if (p.id == t.id) {
+                        exist = true;
+                    }
+                });
+                if (!exist) {
+                    missingTanks.push(t)
+                }
+            });
+            missingTanks.forEach(function (e) {
+                tanks.splice(tanks.indexOf(e), 1);
+                e.kill();
+            });
+        }
+        if (data.bulletData.length != bullets.length) {
+            var missingBullets = [];
+            bullets.forEach(function (t) {
+                exist = false;
+                data.bulletData.forEach(function (p) {
+                    if (p.id == t.id) {
+                        exist = true;
+                    }
+                });
+                if (!exist) {
+                    missingBullets.push(t)
+                }
+            });
+            missingBullets.forEach(function (e) {
+                explode(stage, {x: e.bullet.x, y: e.bullet.y});
+                bullets.splice(bullets.indexOf(e), 1);
+                e.kill();
+            });
+        }
     };
     socket.onclose = function () {
       console.log("closed");
@@ -40,6 +91,7 @@ var left=false;
 var right=false;
 var down=false;
 var up=false;
+var shot = false;
 window.addEventListener('keydown', function(event) {
     switch (event.keyCode) {
         case 65: // Left
@@ -78,6 +130,9 @@ window.addEventListener('keyup', function(event) {
             break;
     }
 }, false);
+window.addEventListener('mousedown', function (event) {
+    shot = true;
+}, false);
 setInterval(function () {
     var acc = up ? 1 : (down ? -1 : 0);
     var rot = left ? 1 : (right ? -1 : 0);
@@ -89,21 +144,22 @@ setInterval(function () {
     if(mytank[0].chassis.x<stage.mouseX)
     {
         if(mytank[0].chassis.y<stage.mouseY){
-            degree= 270+degree;
+            degree = 90 + degree;
         }
         if(mytank[0].chassis.y>stage.mouseY){
-            degree = 270+degree;
+            degree = 90 + degree;
         }
     }else{
         if(mytank[0].chassis.y<stage.mouseY){
-            degree += 90;
+            degree += 270;
         }
         if(mytank[0].chassis.y>stage.mouseY){
-            degree += 90;
+            degree += 270;
         }
     }
     var turretDegree = mytank[0].turret.rotation >= 0? mytank[0].turret.rotation % 360 : 360 + mytank[0].turret.rotation % 360;
     var turRot = clockwiseDistance(turretDegree, degree) > counterClockwiseDistance(turretDegree, degree)? -1 : 1;
+    degree = degree + 180 >= 360 ? degree + 180 - 360 : degree + 180;
     if(Math.abs(turretDegree - degree) < 10){
         turRot = 0;
     }
@@ -111,8 +167,9 @@ setInterval(function () {
         "acceleration" : acc,
         "rotation" : rot,
         "turretRotation" : turRot,
-        "shot": false
+        "shot": shot
     };
+    shot = false;
     socket.send(JSON.stringify(input));
 },100);
 function clockwiseDistance(x,y){
