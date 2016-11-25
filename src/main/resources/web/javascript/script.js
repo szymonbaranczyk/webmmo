@@ -1,19 +1,27 @@
 var stage;
 var tanks = [];
 var bullets = [];
-function Tank(stage,location,id){
+function Tank(stage, location, id, player, rotation) {
     this.id=id;
     this.chassis = new createjs.Shape();
-    this.chassis.graphics.beginFill("#003300").moveTo(25, 40).lineTo(25, -40).lineTo(-25, -40).lineTo(-25, 40).lineTo(25, 40);
+    var chassisColor = player ? "#000033" : "#003300";
+    var turretColor = player ? "#000066" : "#006600";
+    this.chassis.graphics.beginFill(chassisColor).moveTo(25, 40).lineTo(25, -40).lineTo(-25, -40).lineTo(-25, 40).lineTo(25, 40);
     this.chassis.graphics.beginFill("#404040").moveTo(-15,-25).lineTo(15,-25).lineTo(15,-35).lineTo(-15,-35).lineTo(-15,-25);
     this.chassis.x = location.x;
     this.chassis.y = location.y;
+    if (typeof rotation !== 'undefined') {
+        this.chassis.rotation = rotation.chassis
+    }
     stage.addChild(this.chassis);
     this.turret =  new createjs.Shape();
-    this.turret.graphics.beginFill("#006600").drawCircle(0,0, 10);
-    this.turret.graphics.beginFill("#006600").drawRect(-3, 10, 6,42);
+    this.turret.graphics.beginFill(turretColor).drawCircle(0, 0, 10);
+    this.turret.graphics.beginFill(turretColor).drawRect(-3, 10, 6, 42);
     this.turret.x = location.x;
     this.turret.y = location.y;
+    if (typeof rotation !== 'undefined') {
+        this.turret.rotation = rotation.turret
+    }
     stage.addChild(this.turret);
     this.chassis.on("click", function(evt) {
         explode(stage,{x:evt.stageX,y:evt.stageY});
@@ -51,8 +59,6 @@ function randomFloat(min,max){
     return (Math.random() * max) + min;
 }
 function explode(stage,location){
-    console.log("EXPLODING");
-    console.log(location.x + " " + location.y + " " + stage);
     var count=10;
     for (var angle=0; angle<360; angle += Math.round(360/count)){
         var params={};
@@ -91,10 +97,14 @@ window.onload = function() {
 
         createjs.Ticker.setFPS(60);
         createjs.Ticker.addEventListener("tick", stage);
-        // var tank = new Tank(stage, {x:100,y:100},"lol");
-        // tank.move(100,200,0,30);
-        // explode(stage,{x:100,y:100})
     }
     init();
+    $('#myModal').modal('show');
 };
+function connectWithLogin() {
+    connect($("#login")[0].value)
+}
+function connectWithRandomLogin() {
+    connect(makeId())
+}
 

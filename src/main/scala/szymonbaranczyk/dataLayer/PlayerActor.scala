@@ -34,7 +34,9 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
   var data = PlayerData(Random.nextInt(size), Random.nextInt(size), 0, 0, id, "")
   var closeHandle: Option[ActorRef] = None
   var cancellable = system.scheduler.scheduleOnce(5 seconds, self, ReceiveTimeout())
-  var nextMeta = ""
+  var lives = 3
+  var nextMeta = lives.toString
+
 
   override def receive: Receive = {
     case tm: TextMessage.Strict =>
@@ -61,7 +63,9 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
         lastDequeued = Some(popped)
       case None => sender() ! data
     }
-    case Hit() => nextMeta = "hit"
+    case Hit() =>
+      lives = lives - 1
+      logger.debug(s"${lives} zyc ")
     case GetDataWithoutCalc() =>
       lastDequeued match {
         case Some(p) => sender() ! p
@@ -73,6 +77,17 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
     case ReceiveTimeout() => self ! PoisonPill
   }
 
+  def reset() = {
+    logger.debug("reset")
+    queue = Queue.empty[PlayerData] :+ data
+    lives = 3
+  }
+
+  def boundCheck(x: Int) = x match {
+    case i if i < 0 => 0
+    case i if i > size => size
+    case i => i
+  }
   def move(playerData: PlayerData, playerInput: PlayerInput) = {
     val moveDir = playerInput.acceleration match {
       case 1 => speed
@@ -89,15 +104,18 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
       case -1 => -turretRotationSpeed
       case 0 => 0
     }
-    val ret = PlayerData(
-      x = (Math.sin(Math.toRadians(playerData.rotation)) * moveDir + playerData.x).toInt,
-      y = (Math.cos(Math.toRadians(playerData.rotation)) * moveDir + playerData.y).toInt,
+
+    val ret = if (lives > 0) PlayerData(
+      x = boundCheck((Math.sin(Math.toRadians(playerData.rotation)) * moveDir + playerData.x).toInt),
+      y = boundCheck((Math.cos(Math.toRadians(playerData.rotation)) * moveDir + playerData.y).toInt),
       rotation = playerData.rotation + rotationDir,
-      turretRotation = playerData.turretRotation + turretDir - rotationDir,
+      turretRotation = playerData.turretRotation + turretDir + rotationDir,
       id,
-      nextMeta
-    )
-    nextMeta = ""
+      nextMeta)
+    else
+      PlayerData(Random.nextInt(size), Random.nextInt(size), 0, 0, id, "")
+    if (lives <= 0) reset()
+    nextMeta = lives.toString
     ret
   }
 

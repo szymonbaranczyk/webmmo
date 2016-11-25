@@ -22,3 +22,5 @@ libraryDependencies ++= {
     "com.typesafe.play" % "play-json_2.11" % "2.5.9"
   )
 }
+
+mainClass in Compile := Some("szymonbaranczyk.boot.Server")

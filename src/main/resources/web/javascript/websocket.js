@@ -1,5 +1,7 @@
 var socket;
+var myLogin;
 function connect(login) {
+    myLogin = login;
     var loc = window.location, new_uri;
     if (loc.protocol === "https:") {
         new_uri = "wss:";
@@ -10,23 +12,37 @@ function connect(login) {
     new_uri += "/greeter/" + login;
 
     socket = new WebSocket(new_uri);
-
+    setInterval(interval, 100);
     socket.onmessage = function (m) {
         //document.getElementById("debug").innerText = document.getElementById("debug").innerText + m.data;
+        var cameraTranslation = {x: 0, y: 0};
+        var stageHeight = stage.canvas.height;
+        var stageWidth = stage.canvas.width;
         var data = JSON.parse(m.data);
-        //console.log(m.data);
+        data.playersData.forEach(function (player) {
+            if (player.id === myLogin) {
+                cameraTranslation.x = stageWidth / 2 - player.x;
+                cameraTranslation.y = stageHeight / 2 - player.y;
+            }
+        });
         data.playersData.forEach(function(player){
             var tank = undefined;
+            if (player.id == myLogin) {
+                updateMeta(player.meta);
+            }
             tanks.forEach(function (t) {
                 if(t.id===player.id){
                     tank=t;
                 }
             });
             if(tank==null){
-                tank=new Tank(stage,{x:player.x,y:player.y},player.id);
+                tank = new Tank(stage, {
+                    x: player.x + cameraTranslation.x,
+                    y: player.y + cameraTranslation.y
+                }, player.id, player.id == myLogin, {chassis: player.rotation, turret: player.turretRotation});
                 tanks.push(tank);
             }else{
-                tank.move(player.x, player.y, -player.rotation, -player.turretRotation)
+                tank.move(player.x + cameraTranslation.x, player.y + cameraTranslation.y, -player.rotation, -player.turretRotation)
             }
         });
         data.bulletData.forEach(function (bulletData) {
@@ -37,10 +53,13 @@ function connect(login) {
                 }
             });
             if (bullet == null) {
-                bullet = new Bullet(stage, {x: bulletData.x, y: bulletData.y}, bulletData.id);
+                bullet = new Bullet(stage, {
+                    x: bulletData.x + cameraTranslation.x,
+                    y: bulletData.y + cameraTranslation.y
+                }, bulletData.id);
                 bullets.push(bullet);
             } else {
-                bullet.move(bulletData.x, bulletData.y);
+                bullet.move(bulletData.x + cameraTranslation.x, bulletData.y + cameraTranslation.y);
             }
         });
         if (data.playersData.length != tanks.length) {
@@ -85,8 +104,6 @@ function connect(login) {
       console.log("closed");
     };
 }
-var login = makeId();
-connect(login);
 var left=false;
 var right=false;
 var down=false;
@@ -133,12 +150,19 @@ window.addEventListener('keyup', function(event) {
 window.addEventListener('mousedown', function (event) {
     shot = true;
 }, false);
-setInterval(function () {
+
+function clockwiseDistance(x, y) {
+    return y > x ? y - x : 360 - (x - y);
+}
+function counterClockwiseDistance(x, y) {
+    return y > x ? 360 - (y - x) : x - y;
+}
+function interval() {
     var acc = up ? 1 : (down ? -1 : 0);
     var rot = left ? 1 : (right ? -1 : 0);
 
     var mytank = tanks.filter(function(t){
-        return t.id === login;
+        return t.id === myLogin;
     });
     var degree = Math.atan((mytank[0].chassis.y-stage.mouseY)/(mytank[0].chassis.x-stage.mouseX)) * (180/Math.PI);
     if(mytank[0].chassis.x<stage.mouseX)
@@ -171,14 +195,7 @@ setInterval(function () {
     };
     shot = false;
     socket.send(JSON.stringify(input));
-},100);
-function clockwiseDistance(x,y){
-    return y>x ? y-x: 360-(x-y);
 }
-function counterClockwiseDistance(x,y){
-    return y>x ? 360-(y-x): x-y;
-}
-
 function makeId()
 {
     var text = "";
@@ -188,4 +205,7 @@ function makeId()
         text += possible.charAt(Math.floor(Math.random() * possible.length));
 
     return text;
+}
+function updateMeta(meta) {
+    console.log(meta);
 }
