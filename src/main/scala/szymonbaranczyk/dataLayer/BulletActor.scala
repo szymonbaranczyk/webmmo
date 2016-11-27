@@ -8,7 +8,7 @@ import szymonbaranczyk.exitFlow.PlayerData
   * Created by SBARANCZ on 2016-11-07.
   */
 class BulletActor(id: Int, var state: BulletState, xSpeed: Int, ySpeed: Int, owner: String) extends Actor with LazyLogging {
-  val size = 1000
+  val size = 4000
 
   override def receive = {
     case CheckCollisions(players) =>

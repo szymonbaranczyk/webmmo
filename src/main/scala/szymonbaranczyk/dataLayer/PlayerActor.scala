@@ -22,13 +22,13 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
 
   import context._
 
-  val size = 1000
-  val speed = 5
-  val speedReverse = -3
-  val rotationSpeed = 2
-  val turretRotationSpeed = 2
+  val size = 4000
+  val speed = 10
+  val speedReverse = -6
+  val rotationSpeed = 4
+  val turretRotationSpeed = 4
   val turretLength = 52
-  val bulletSpeed = 10
+  val bulletSpeed = 20
   var queue = Queue.empty[PlayerData]
   var lastDequeued: Option[PlayerData] = None
   var data = PlayerData(Random.nextInt(size), Random.nextInt(size), 0, 0, id, "")
@@ -36,7 +36,7 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
   var cancellable = system.scheduler.scheduleOnce(5 seconds, self, ReceiveTimeout())
   var lives = 3
   var nextMeta = lives.toString
-
+  var canShootCounter = 0
 
   override def receive: Receive = {
     case tm: TextMessage.Strict =>
@@ -44,24 +44,31 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
       data = move(data, playerInput)
       queue = queue :+ data
       if (playerInput.shot) lastDequeued match {
-        case Some(d) => parent ! CreateBullet(
-          (sin(toRadians(d.turretRotation)) * turretLength + d.x).toInt,
-          (cos(toRadians(d.turretRotation)) * turretLength + d.y).toInt,
-          (sin(toRadians(d.turretRotation)) * bulletSpeed).toInt,
-          (cos(toRadians(d.turretRotation)) * bulletSpeed).toInt,
-          id
-        )
+        case Some(d) =>
+          if (canShootCounter == 0) {
+            parent ! CreateBullet(
+              (sin(toRadians(d.turretRotation)) * turretLength + d.x).toInt,
+              (cos(toRadians(d.turretRotation)) * turretLength + d.y).toInt,
+              (sin(toRadians(d.turretRotation)) * bulletSpeed).toInt,
+              (cos(toRadians(d.turretRotation)) * bulletSpeed).toInt,
+              id
+            )
+            canShootCounter = 5
+          }
         case None =>
       }
 
       cancellable.cancel()
       cancellable = system.scheduler.scheduleOnce(5 seconds, self, ReceiveTimeout())
-    case GetData() => queue.dequeueOption match {
-      case Some((popped, newQueue)) =>
-        queue = newQueue
-        sender ! popped
-        lastDequeued = Some(popped)
-      case None => sender() ! data
+    case GetData() => {
+      if (canShootCounter > 0) canShootCounter = canShootCounter - 1
+      queue.dequeueOption match {
+        case Some((popped, newQueue)) =>
+          queue = newQueue
+          sender ! popped
+          lastDequeued = Some(popped)
+        case None => sender() ! data
+      }
     }
     case Hit() =>
       lives = lives - 1
@@ -124,7 +131,7 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
       case Some(ref) => ref ! CloseConnection()
         logger.debug("closing publisher")
         parent ! DeletePlayer(id)
-      case None => logger.error(s"  ${self.path.toSerializationFormat} can't close GameDataPublisher")
+      case None => logger.error(s"${self.path.toSerializationFormat} can't close GameDataPublisher")
     }
   }
 }

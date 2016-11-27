@@ -2,7 +2,7 @@ package szymonbaranczyk.dataLayer
 
 import akka.actor.{Actor, ActorRef, Props}
 import com.typesafe.scalalogging.LazyLogging
-import szymonbaranczyk.enterFlow.{CreatePlayer, PlayerInRandomGame, PlayerInRandomGameWithAsker}
+import szymonbaranczyk.enterFlow._
 import szymonbaranczyk.exitFlow.{GameData, GameDataBus, GameDataEnvelope, PlayerData}
 import szymonbaranczyk.helper.OutputJsonParser
 
@@ -81,6 +81,8 @@ class GameActor(gameDataBus: GameDataBus, id: Int) extends Actor with OutputJson
     }
     case cb: CreateBullet =>
       (createBullet _).tupled(CreateBullet.unapply(cb).get)
+    case GetGameInfo() =>
+      sender ! GameInfo(players.size)
     case o => logger.debug("unrecognized element" + o.toString)
   }
 

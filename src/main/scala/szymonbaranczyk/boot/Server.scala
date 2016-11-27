@@ -12,7 +12,6 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
-import szymonbaranczyk.dataLayer.CloseHandle
 import szymonbaranczyk.enterFlow._
 import szymonbaranczyk.exitFlow._
 import szymonbaranczyk.helper.OutputJsonParser
@@ -36,9 +35,7 @@ object Server extends LazyLogging with OutputJsonParser {
 
   val eventBus = new GameDataBus()
 
-  val gameManager = system.actorOf(Props[GameManager])
-  //TODO delete mock game
-  gameManager ! CreateGame(1, eventBus)
+  val gameManager = system.actorOf(Props(new GameManager(conf.getInt("settings.preferredNumberOfPlayersInGame"), eventBus)))
 
   val loggingSink = Sink.foreach((x: Message) => x match {
     case tm: TextMessage.Strict =>

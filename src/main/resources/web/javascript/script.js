@@ -1,6 +1,23 @@
 var stage;
 var tanks = [];
 var bullets = [];
+var size = 4000;
+function Border(stage, size) {
+    this.paint = new createjs.Shape();
+    this.paint.graphics.beginFill("#000000").drawRect(0, 0, size, 4);
+    this.paint.graphics.beginFill("#000000").drawRect(0, 0, 4, size);
+    this.paint.graphics.beginFill("#000000").drawRect(0, size - 4, size, 4);
+    this.paint.graphics.beginFill("#000000").drawRect(size - 4, 0, 4, size);
+    for (var i = 1; i - 1 < size / 100; i++) {
+        this.paint.graphics.beginFill("#688bea").drawRect(0, i * 100, size, 1);
+        this.paint.graphics.beginFill("#688bea").drawRect(i * 100, 0, 1, size);
+    }
+
+    stage.addChild(this.paint);
+    this.move = function (x, y) {
+        createjs.Tween.get(this.paint).to({x: x, y: y}, 100)
+    }
+}
 function Tank(stage, location, id, player, rotation) {
     this.id=id;
     this.chassis = new createjs.Shape();
@@ -23,12 +40,7 @@ function Tank(stage, location, id, player, rotation) {
         this.turret.rotation = rotation.turret
     }
     stage.addChild(this.turret);
-    this.chassis.on("click", function(evt) {
-        explode(stage,{x:evt.stageX,y:evt.stageY});
-    });
-    this.turret.on("click", function(evt) {
-        explode(stage,{x:evt.stageX,y:evt.stageY});
-    });
+
     this.move = function(x,y,rotation,turretRotation){
         createjs.Tween.get(this.chassis)
             .to({ x: x, y:y, rotation:rotation }, 100);
@@ -94,7 +106,7 @@ function explode(stage,location){
 window.onload = function() {
     function init() {
         stage = new createjs.Stage("demoCanvas");
-
+        resizeCanvas();
         createjs.Ticker.setFPS(60);
         createjs.Ticker.addEventListener("tick", stage);
     }
@@ -106,5 +118,10 @@ function connectWithLogin() {
 }
 function connectWithRandomLogin() {
     connect(makeId())
+}
+function resizeCanvas() {
+    var canvas = stage.canvas;
+    canvas.width = $("body").width();
+    canvas.height = $("body").height() - 4;
 }
 

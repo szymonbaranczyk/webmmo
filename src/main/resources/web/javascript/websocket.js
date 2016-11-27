@@ -13,6 +13,7 @@ function connect(login) {
 
     socket = new WebSocket(new_uri);
     setInterval(interval, 100);
+    var border = new Border(stage, 4000);
     socket.onmessage = function (m) {
         //document.getElementById("debug").innerText = document.getElementById("debug").innerText + m.data;
         var cameraTranslation = {x: 0, y: 0};
@@ -25,6 +26,7 @@ function connect(login) {
                 cameraTranslation.y = stageHeight / 2 - player.y;
             }
         });
+        border.move(cameraTranslation.x, cameraTranslation.y);
         data.playersData.forEach(function(player){
             var tank = undefined;
             if (player.id == myLogin) {
@@ -207,5 +209,16 @@ function makeId()
     return text;
 }
 function updateMeta(meta) {
-    console.log(meta);
+    var lives = parseInt(meta[0]);
+    if (lives != $(".glyphicon-heart").length) {
+        var hearts = $(".heart");
+        for (var i = 0; i < hearts.length; i++) {
+            if (i < lives) {
+                $(hearts[i]).addClass("glyphicon-heart").removeClass("glyphicon-heart-empty");
+            } else {
+                $(hearts[i]).removeClass("glyphicon-heart").addClass("glyphicon-heart-empty");
+            }
+        }
+    }
 }
+
