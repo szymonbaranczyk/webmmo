@@ -83,6 +83,7 @@ class GameActor(gameDataBus: GameDataBus, id: Int) extends Actor with OutputJson
       (createBullet _).tupled(CreateBullet.unapply(cb).get)
     case GetGameInfo() =>
       sender ! GameInfo(players.size)
+    case _: BulletState => //late bulletState, happens fairly often
     case o => logger.debug("unrecognized element" + o.toString)
   }
 

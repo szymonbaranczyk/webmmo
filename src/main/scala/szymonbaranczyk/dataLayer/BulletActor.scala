@@ -5,7 +5,7 @@ import com.typesafe.scalalogging.LazyLogging
 import szymonbaranczyk.exitFlow.PlayerData
 
 /**
-  * Created by SBARANCZ on 2016-11-07.
+  * Created by Szymon Barańczyk.
   */
 class BulletActor(id: Int, var state: BulletState, xSpeed: Int, ySpeed: Int, owner: String) extends Actor with LazyLogging {
   val size = 4000

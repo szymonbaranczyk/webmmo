@@ -1,6 +1,6 @@
 name := "webmmo"
 
-version := "0.1"
+version := "1.0"
 
 scalaVersion := "2.11.8"
 
@@ -22,5 +22,6 @@ libraryDependencies ++= {
     "com.typesafe.play" % "play-json_2.11" % "2.5.9"
   )
 }
-
 mainClass in Compile := Some("szymonbaranczyk.boot.Server")
+mainClass in packageBin := Some("szymonbaranczyk.boot.Server")
+mainClass in assembly := Some("szymonbaranczyk.boot.Server")

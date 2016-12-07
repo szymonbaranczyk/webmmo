@@ -72,11 +72,10 @@ class PlayerActor(id: String) extends Actor with InputJsonParser with LazyLoggin
     }
     case Hit() =>
       lives = lives - 1
-      logger.debug(s"${lives} zyc ")
     case GetDataWithoutCalc() =>
       lastDequeued match {
         case Some(p) => sender() ! p
-        case None => logger.error("no last dequeuedElement")
+        case None => sender() ! data
       }
     case CloseHandle(ref) =>
       logger.debug(s"  ${self.path.toSerializationFormat} received handle")

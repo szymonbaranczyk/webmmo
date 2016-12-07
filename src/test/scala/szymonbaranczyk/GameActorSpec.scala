@@ -39,7 +39,7 @@ class GameActorSpec extends TestKit(ActorSystem("MySpec")) with ImplicitSender
       actorRef ! CreatePlayer(1, actorRef, "player1")
       actorRef ! CalculateGameState()
       //probe.expectMsgClass(20 second, classOf[GameData])
-      probe.expectNoMsg(10 second) //WTF!!!
+      probe.expectNoMsg(10 second)
     }
 
   }
